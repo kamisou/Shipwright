@@ -1,8 +1,11 @@
 #include "SohMenu.h"
 #include "soh/Notification/Notification.h"
 #include "soh/Enhancements/enhancementTypes.h"
+#include "soh/Enhancements/game-interactor/GameInteractor.h"
 #include "SohModals.h"
 #include "soh/OTRGlobals.h"
+#include "soh/CloudSaveManager.h"
+#include "soh/SaveManager.h"
 #include <soh/GameVersions.h>
 #include "soh/ResourceManagerHelpers.h"
 #include "UIWidgets.hpp"
@@ -282,6 +285,73 @@ void SohMenu::AddMenuSettings() {
     for (uint32_t i = 0; i < ResourceMgr_GetNumGameVersions(); i++) {
         AddWidget(path, GetGameVersionString(i), WIDGET_TEXT);
     }
+
+    // Cloud Saves
+    path.sidebarName = "Cloud Saves";
+    path.column = SECTION_COLUMN_1;
+    AddSidebarEntry("Settings", path.sidebarName, 2);
+
+    AddWidget(path, "Google Drive", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path,
+              "Keep the three save slots synchronized between devices through a folder managed by Google Drive for "
+              "desktop. Select the same Drive folder on every device. Ship of Harkinian stores saves in its own "
+              "subfolder and never stores your Google credentials.",
+              WIDGET_TEXT);
+    AddWidget(path, "Enable cloud saves", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("CloudSaves.Enabled"))
+        .RaceDisable(false)
+        .Options(CheckboxOptions().Tooltip("Synchronizes save files with the configured Google Drive folder."));
+    AddWidget(path, "Google Drive folder", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) {
+        ImGui::BeginDisabled(CVarGetInteger(CVAR_SETTING("CloudSaves.Enabled"), 0) == 0);
+        ImGui::TextUnformatted(info.name.c_str());
+        CVarInputString("##GoogleDriveSaveFolder", CVAR_SETTING("CloudSaves.GoogleDrivePath"),
+                        InputOptions()
+                            .PlaceholderText("C:\\Users\\you\\Google Drive\\My Drive")
+                            .DefaultValue("")
+                            .Size(ImVec2(ImGui::GetContentRegionAvail().x, 0))
+                            .LabelPosition(LabelPositions::None));
+        ImGui::EndDisabled();
+    });
+    AddWidget(path, "Sync automatically", WIDGET_CVAR_CHECKBOX)
+        .CVar(CVAR_SETTING("CloudSaves.AutoSync"))
+        .RaceDisable(false)
+        .Options(CheckboxOptions().DefaultValue(true).Tooltip(
+            "Checks for newer saves at startup and uploads each save after it is written."));
+    AddWidget(path, "Sync now", WIDGET_BUTTON)
+        .RaceDisable(false)
+        .PreFunc([](WidgetInfo& info) { info.options->disabled = !CloudSaveManager::Instance().IsConfigured(); })
+        .Callback([](WidgetInfo& info) { CloudSaveManager::Instance().SyncNow(); })
+        .Options(ButtonOptions().Tooltip("Keeps the newest copy and preserves the older copy as a conflict backup."));
+
+    path.column = SECTION_COLUMN_2;
+    AddWidget(path, "Status", WIDGET_SEPARATOR_TEXT);
+    AddWidget(path, "Cloud save status", WIDGET_CUSTOM).CustomFunction([](WidgetInfo& info) {
+        const std::string status = CloudSaveManager::Instance().GetStatusText();
+        ImGui::TextWrapped("%s", status.c_str());
+        const auto cloudDirectory = CloudSaveManager::Instance().GetCloudDirectory();
+        if (!cloudDirectory.empty()) {
+            ImGui::Spacing();
+            ImGui::TextWrapped("Cloud folder: %s", cloudDirectory.string().c_str());
+        }
+    });
+    AddWidget(path, "Upload local saves", WIDGET_BUTTON)
+        .RaceDisable(false)
+        .PreFunc([](WidgetInfo& info) { info.options->disabled = !CloudSaveManager::Instance().IsConfigured(); })
+        .Callback([](WidgetInfo& info) { CloudSaveManager::Instance().UploadAll(); })
+        .Options(ButtonOptions().Tooltip("Replaces Drive copies with local saves. Existing Drive copies are not "
+                                         "deleted when no matching local slot exists."));
+    AddWidget(path, "Download Drive saves", WIDGET_BUTTON)
+        .RaceDisable(false)
+        .PreFunc([](WidgetInfo& info) {
+            info.options->disabled = !CloudSaveManager::Instance().IsConfigured() || GameInteractor::IsSaveLoaded();
+        })
+        .Callback([](WidgetInfo& info) {
+            SaveManager::Instance->ThreadPoolWait();
+            CloudSaveManager::Instance().DownloadAll();
+            SaveManager::Instance->Init();
+        })
+        .Options(ButtonOptions().Tooltip("Replaces local slots with their Drive copies. Use from the file select "
+                                         "screen so a loaded game cannot be replaced underneath it."));
 
     // Audio Settings
     path.sidebarName = "Audio";

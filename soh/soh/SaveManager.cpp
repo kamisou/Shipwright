@@ -1,4 +1,5 @@
 #include "SaveManager.h"
+#include "CloudSaveManager.h"
 #include "OTRGlobals.h"
 #include "Enhancements/game-interactor/GameInteractor.h"
 #include "Enhancements/randomizer/SeedContext.h"
@@ -495,6 +496,8 @@ void SaveManager::Init() {
     if (!std::filesystem::exists(sSavePath)) {
         std::filesystem::create_directory(sSavePath);
     }
+
+    CloudSaveManager::Instance().SyncOnStartup();
 
     // If there is a lingering unversioned save, convert it
     if (std::filesystem::exists(sOldSavePath)) {
@@ -1327,6 +1330,7 @@ void SaveManager::SaveFileThreaded(int fileNum, SaveContext* saveContext, int se
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnSaveFile>(fileNum, sectionID);
     SPDLOG_INFO("Save File Finish - fileNum: {}", fileNum);
     saveMtx.unlock();
+    CloudSaveManager::Instance().UploadFile(fileName);
 }
 
 // SaveSection creates a copy of gSaveContext to prevent mid-save data modification, and passes its reference to
@@ -1366,6 +1370,8 @@ void SaveManager::SaveGlobal() {
 
     std::ofstream output(sGlobalPath);
     output << std::setw(1) << globalBlock << std::endl;
+    output.close();
+    CloudSaveManager::Instance().UploadFile(sGlobalPath);
 }
 
 void SaveManager::LoadFile(int fileNum) {
@@ -2517,6 +2523,7 @@ void SaveManager::CopyZeldaFile(int from, int to) {
     std::filesystem::copy_file(GetFileName(from), GetFileName(to));
 #endif
     fileMetaInfo[to] = fileMetaInfo[from];
+    CloudSaveManager::Instance().UploadFile(GetFileName(to));
 }
 
 void SaveManager::DeleteZeldaFile(int fileNum) {
@@ -2527,6 +2534,7 @@ void SaveManager::DeleteZeldaFile(int fileNum) {
     fileMetaInfo[fileNum].randoSave = false;
     fileMetaInfo[fileNum].requiresMasterQuest = false;
     fileMetaInfo[fileNum].requiresOriginal = false;
+    CloudSaveManager::Instance().RemoveFile(GetFileName(fileNum));
     GameInteractor::Instance->ExecuteHooks<GameInteractor::OnDeleteFile>(fileNum);
 }
 
