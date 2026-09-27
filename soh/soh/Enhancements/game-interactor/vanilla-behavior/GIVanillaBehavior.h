@@ -928,6 +928,14 @@ typedef enum {
 
     // #### `result`
     // ```c
+    // gSaveContext.health < STARTING_HEALTH
+    // ```
+    // #### `args`
+    // - None
+    VB_FULL_HEALTH_SPAWN,
+
+    // #### `result`
+    // ```c
     // true
     // ```
     // #### `args`
@@ -1262,6 +1270,14 @@ typedef enum {
     // #### `args`
     // - `*EnGb`
     VB_GIVE_ITEM_FROM_POE_COLLECTOR,
+
+    // #### `result`
+    // ```c
+    // !Flags_GetEventChkInf(EVENTCHKINF_PLAYED_SONG_FOR_SCARECROW_AS_ADULT)
+    // ```
+    // #### `args`
+    // - None
+    VB_GIVE_ITEM_FROM_SCARECROW,
 
     // #### `result`
     // ```c
@@ -1634,6 +1650,14 @@ typedef enum {
     // #### `args`
     // - `*EnItem00`
     VB_ITEM00_DESPAWN,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
+    // - `*EnItem00`
+    VB_ITEM00_REQUIRE_OBJECT,
 
     // #### `result`
     // ```c
@@ -2738,6 +2762,14 @@ typedef enum {
     // true
     // ```
     // #### `args`
+    // - `*Actor` (spawnedActor)
+    VB_SET_CHILD_ACTOR_PARENT,
+
+    // #### `result`
+    // ```c
+    // true
+    // ```
+    // #### `args`
     // - `*EnNiwLady`
     VB_SET_CUCCO_COUNT,
 
@@ -2959,6 +2991,14 @@ typedef enum {
     // #### `args`
     // - None
     VB_SKIP_SCARECROWS_SONG,
+
+    // #### `result`
+    // ```c
+    // !gMapLoading
+    // ```
+    // #### `args`
+    // - `s16` (actorId)
+    VB_SPAWN_ACTOR_WITHOUT_OBJECT,
 
     // #### `result`
     // ```c
@@ -4048,4 +4088,13 @@ typedef enum {
     // #### `args`
     // - `*Player`
     VB_PLAYER_UNEQUIP_MASK_WITHOUT_BUTTON,
+
+    // #### `result`
+    // ```c
+    // this->itemAction != PLAYER_IA_BOTTLE
+    // ```
+    // #### `args`
+    // - none
+    VB_EMPTY_BOTTLE_OI,
+
 } GIVanillaBehavior;
